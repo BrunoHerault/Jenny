@@ -98,6 +98,14 @@ ggplot() +
 
 ![](analyses_files/figure-markdown_github/Ptot%20fig-1.png)
 
+This means that, in this ecosystem :
+
+1.  when, clay = 0, The predicted Total P value is exp(theta\_0) = exp(2.59) = 13.32
+
+2.  when clay tends to 100, the predicted maximum Total P value is exp(theta\_0 + theta\_1) = exp(2.59 + 3.54) = 464.4
+
+3.  the 50% Total\_P point (between clay = 0 and clay =100) is reached when Clay = theta\_3 = 6.73% (so low!)
+
 Bray P versus Clays
 ===================
 
