@@ -1,10 +1,15 @@
 analyses
 ================
 Bruno Hérault
-5/18/2018
+5/24/2018
 
 -   [Ptot versus Clay](#ptot-versus-clay)
 -   [Bray P versus Clays](#bray-p-versus-clays)
+
+``` r
+knitr::opts_chunk$set(echo = TRUE)
+data <- read.delim("~/Library/Mobile Documents/com~apple~CloudDocs/Bruno/Publications/jenny/Analyses/guyaallvariables.txt")
+```
 
 Ptot versus Clay
 ================
@@ -19,7 +24,7 @@ Theta\_0: the Total P value when clay equal 0,
 
 Theta\_2 driving the slope of the relationship when Clay close to 0.
 
-Models written in Stan language. Inference using HMC. Total P follows a lognormal law because always positive and variabiliy increase with Clay.
+Models written in Stan language. Inference using HMC.
 
 ``` r
 dataP<-data.frame("ptot"=log(data$Ptot), "clay"=data$Clay)
@@ -93,6 +98,7 @@ ggplot() +
   geom_ribbon(data=newdata, aes(x=clay, ymin = q05, ymax = q95), alpha = .25)+
   geom_point(data=dataP, aes(x = clay, y=ptot))+
   geom_line(data=newdata, aes(x=clay, y=med))+
+  
   xlab("Perc. Clay") + ylab("log(Total P)") + theme(legend.position=" none")
 ```
 
@@ -109,4 +115,82 @@ This means that, in this ecosystem :
 Bray P versus Clays
 ===================
 
-to be done
+Exploring the relation between the two through a negative exponential model.
+
+**Bary P = Theta\_1 \* exp(-Theta2 \* Clay) with**
+
+Theta\_1: the bray P value when clay equal 0,
+
+Theta\_2 driving the instantaneous slope of the relationship with Clay.
+
+Models written in Stan language. Inference using HMC.
+
+``` r
+dataB<-data.frame("pbray"=data$BrayP, "clay"=data$Clay)
+dataB<-na.omit(dataB)
+library(rstan)
+# pbray <- stan(file="Pbray.stan",
+#         data=list(N=length(dataB$pbray), pbray=dataB$pbray, clay=dataB$clay),
+#                      pars=c("theta_1", "theta_2", "sigma"),
+#                       chains=1,
+#                       iter=2500,
+#                       warmup=1000)
+# save(pbray, file="pbray.Rdata")
+load(file="pbray.Rdata")
+```
+
+``` r
+library(rstan)
+traceplot(pbray, pars=c("theta_1", "theta_2","sigma"))
+```
+
+![](analyses_files/figure-markdown_github/Pbray%20diag-1.png)
+
+``` r
+plot(pbray)
+```
+
+    ## ci_level: 0.8 (80% intervals)
+
+    ## outer_level: 0.95 (95% intervals)
+
+![](analyses_files/figure-markdown_github/Pbray%20diag-2.png)
+
+``` r
+par<-extract(pbray)
+clay<-0:70
+med<-numeric()
+q05<-numeric()
+q95<-numeric()
+for (i in clay){
+med<-c(med,median(
+  par$theta_1 * exp(-par$theta_2*i)
+  ))
+q05<-c(q05,quantile(
+    par$theta_1 * exp(-par$theta_2*i)
+  , probs=0.01))
+q95<-c(q95,quantile(
+   par$theta_1 * exp(-par$theta_2*i)
+  , probs=0.99))
+}
+```
+
+``` r
+library(ggplot2)
+newdata <- data.frame(clay=clay, med=med, q05=q05,
+                    q95= q95)
+ggplot() +
+  geom_ribbon(data=newdata, aes(x=clay, ymin = q05, ymax = q95), alpha = .25)+
+  geom_point(data=dataB, aes(x = clay, y=pbray))+
+  geom_line(data=newdata, aes(x=clay, y=med))+
+  scale_y_sqrt() +
+  xlab("Perc. Clay") + ylab("Bray P, sqrt scale") + theme(legend.position=" none")
+```
+
+![](analyses_files/figure-markdown_github/Pbray%20fig-1.png)
+
+This means that, in this ecosystem :
+
+1.  when, clay = 0, The predicted averaged bray P value is theta\_1 = 1.58
+
+2.  d\_Pbray / d\_Clay = -0.046 \* Clay. 50% Maximum Pbray reached at 1/0.046, at 21.74% of Clay,
